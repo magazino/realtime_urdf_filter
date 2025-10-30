@@ -81,7 +81,8 @@
 ////#define GLH_EXT_SINGLE_FILE
 //#include <glh/glh_extensions.h>
 
-#include <GL/glew.h>
+#include <realtime_urdf_filter/glad/glad.h>
+#include <GL/glu.h>
 
 #include <iostream>
 #include <vector>

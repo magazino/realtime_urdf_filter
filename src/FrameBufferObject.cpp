@@ -263,19 +263,19 @@ FramebufferObject::initialize(	unsigned int width, unsigned int height ) {
   //		return false;
   //}
 
-  if(!GLEW_EXT_framebuffer_object)
+  if(!GLAD_GL_EXT_framebuffer_object)
     cout << "ERROR: FramebufferObject - GL_EXT_framebuffer_object not supported!" << endl;
 
-  if(!GLEW_EXT_packed_depth_stencil)
+  if(!GLAD_GL_EXT_packed_depth_stencil)
     cout << "ERROR: FramebufferObject - GL_EXT_packed_depth_stencil not supported!" << endl;
 
-  if(!GLEW_EXT_multi_draw_arrays)
-    cout << "ERROR: FramebufferObject - GLEW_EXT_multi_draw_arrays not supported!" << endl;
+  if(!GLAD_GL_EXT_multi_draw_arrays)
+    cout << "ERROR: FramebufferObject - GL_EXT_multi_draw_arrays not supported!" << endl;
 
-  if(!GLEW_ARB_framebuffer_object)
+  if(!GLAD_GL_ARB_framebuffer_object)
     cout << "ERROR: FramebufferObject - GL_ARB_framebuffer_object not supported!" << endl;
 
-  if(!GLEW_ARB_texture_non_power_of_two)
+  if(!GLAD_GL_ARB_texture_non_power_of_two)
     cout << "ERROR: FramebufferObject - GL_ARB_texture_non_power_of_two not supported!" << endl;
 
 

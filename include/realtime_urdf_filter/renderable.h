@@ -31,7 +31,7 @@
 #ifndef REALTIME_PERCEPTION_RENDERABLE_H_
 #define REALTIME_PERCEPTION_RENDERABLE_H_
 
-#include <GL3/gl3.h>
+#include <realtime_urdf_filter/glad/glad.h>
 #include <tf/tf.h>
 // this is necessary for diamondback. for more recent ROS versions, use:
 // #include <urdf_interface/color.h>

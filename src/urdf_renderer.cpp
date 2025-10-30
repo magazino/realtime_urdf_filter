@@ -29,8 +29,7 @@
  */
 
 
-#include <GL/glew.h>
-#include <GL3/gl3.h>
+#include <realtime_urdf_filter/glad/glad.h>
 #include <GL/glu.h>
 #include <GL/glx.h>
 #undef Success  // <---- Screw Xlib for this
