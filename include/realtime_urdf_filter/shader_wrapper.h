@@ -33,8 +33,8 @@
 
 #include <fstream>
 #include <stdexcept>
-#define GL3_PROTOTYPES 1
-#include <GL3/gl3.h>
+#include <realtime_urdf_filter/glad/glad.h>
+#include <GL/glu.h>
 
 namespace realtime_urdf_filter
 {

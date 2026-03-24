@@ -43,7 +43,10 @@
 #include "realtime_urdf_filter/shader_wrapper.h"
 #include "realtime_urdf_filter/urdf_renderer.h"
 
-#include <GL/freeglut.h>
+#include <realtime_urdf_filter/glad/glad.h>
+#define EGL_NO_X11
+#include <EGL/egl.h>
+//#include <GL/glu.h>
 
 namespace realtime_urdf_filter
 {
@@ -101,6 +104,8 @@ class RealtimeURDFFilter
     image_transport::CameraPublisher mask_pub_;
 
     // rendering objects
+    bool gl_initialized_;
+    EGLDisplay egl_display_;
     FramebufferObject *fbo_;
     bool fbo_initialized_;
     GLuint depth_image_pbo_;
@@ -114,7 +119,6 @@ class RealtimeURDFFilter
     tf::Quaternion camera_offset_q_;
     std::string cam_frame_;
     std::string fixed_frame_;
-    bool show_gui_;
 
     // do we have subscribers for the mask image?
     bool need_mask_;

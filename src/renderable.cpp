@@ -28,9 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define GL3_PROTOTYPES 1
-#include <GL3/gl3.h>
-#include <GL/freeglut.h>
+#include <realtime_urdf_filter/glad/glad.h>
 #include <realtime_urdf_filter/renderable.h>
 #include <resource_retriever/retriever.h>
 
@@ -80,7 +78,7 @@ namespace realtime_urdf_filter
   void RenderableSphere::render ()
   {
     applyTransform ();
-    glutSolidSphere(radius, 10, 10);
+    //glutSolidSphere(radius, 10, 10);
     unapplyTransform ();
   }
 

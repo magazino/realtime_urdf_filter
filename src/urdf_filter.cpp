@@ -53,6 +53,7 @@ RealtimeURDFFilter::RealtimeURDFFilter (ros::NodeHandle &nh, int argc, char **ar
   , argc_ (argc), argv_(argv)
   , mask_(nullptr)
   , masked_depth_(nullptr)
+  , gl_initialized_(false)
 {
   // get fixed frame name
   XmlRpc::XmlRpcValue v;
@@ -95,12 +96,6 @@ RealtimeURDFFilter::RealtimeURDFFilter (ros::NodeHandle &nh, int argc, char **ar
   depth_distance_threshold_ = (double)v;
   ROS_INFO ("using depth distance threshold %f", depth_distance_threshold_);
 
-  // depth distance threshold (how far from the model are points still deleted?)
-  nh_.getParam ("show_gui", v);
-  ROS_ASSERT (v.getType() == XmlRpc::XmlRpcValue::TypeBoolean && "need a show_gui paramter!");
-  show_gui_ = (bool)v;
-  ROS_INFO ("showing gui / visualization: %s", (show_gui_?"ON":"OFF"));
-
   // fitler replace value
   nh_.getParam ("filter_replace_value", v);
   ROS_ASSERT (v.getType() == XmlRpc::XmlRpcValue::TypeDouble && "need a filter_replace_value paramter!");
@@ -123,6 +118,9 @@ RealtimeURDFFilter::~RealtimeURDFFilter ()
   if (mask_)
   {
     free(mask_);
+  }
+  if (gl_initialized_) {
+    eglTerminate(egl_display_);
   }
 }
 
@@ -372,32 +370,50 @@ unsigned char* RealtimeURDFFilter::bufferFromDepthImage (cv::Mat1f depth_image)
 // set up OpenGL stuff
 void RealtimeURDFFilter::initGL ()
 {
-  static bool gl_initialized = false;
+  if (!gl_initialized_) {
+    ROS_INFO("Initializing EGL...");
 
-  if (!gl_initialized) {
-    ROS_INFO("Initializing GLUT...");
-    glutInit (&argc_, argv_);
+    const EGLint config_attribs[] = {
+        EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
+        EGL_BLUE_SIZE, 8,
+        EGL_GREEN_SIZE, 8,
+        EGL_RED_SIZE, 8,
+        EGL_DEPTH_SIZE, 8,
+        EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
+        EGL_NONE
+    };
 
-    //TODO: change this to use an offscreen pbuffer, so no window is necessary,
-    //for now, we can just hide it (see below)
-    
-    // The debug window shows a 3x2 grid of images
-    glutInitWindowSize (960, 480);
-    glutInitDisplayMode ( GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_STENCIL);
-    glutCreateWindow ("Realtime URDF Filter Debug Window");
+    const EGLint pbuffer_attribs[] = {
+        EGL_WIDTH, width_,
+        EGL_HEIGHT, height_,
+        EGL_NONE,
+    };
 
-    // Hide the GLUT window
-    if (!show_gui_) {
-      glutHideWindow();
-    }
+    EGLint major, minor;
+    egl_display_ = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    eglInitialize(egl_display_, &major, &minor);
 
-    gl_initialized = true;
+    // select an appropriate configuration
+    EGLint num_configs;
+    EGLConfig egl_cfg;
+    eglChooseConfig(egl_display_, config_attribs, &egl_cfg, 1, &num_configs);
+
+    // create a surface
+    EGLSurface egl_surf = eglCreatePbufferSurface(egl_display_, egl_cfg,
+                                                  pbuffer_attribs);
+    // bind the API
+    eglBindAPI(EGL_OPENGL_API);
+
+    // create a context and make it current
+    EGLContext egl_ctx = eglCreateContext(egl_display_, egl_cfg, EGL_NO_CONTEXT, NULL);
+    eglMakeCurrent(egl_display_, egl_surf, egl_surf, egl_ctx);
+
+    gl_initialized_ = true;
   }
 
-  ROS_INFO("Initializing GLEW...");
-  GLenum err = glewInit();
-  if (GLEW_OK != err) {
-    throw std::runtime_error("ERROR: could not initialize GLEW!");
+  ROS_INFO("Initializing GLAD...");
+  if (!gladLoadGLLoader((GLADloadproc)eglGetProcAddress)) {
+    throw std::runtime_error("ERROR: could not initialize GLAD!");
   }
 
   ROS_INFO("Initializing FrameBufferObject...");
@@ -641,89 +657,6 @@ void RealtimeURDFFilter::render (const double* camera_projection_matrix, ros::Ti
   fbo_->endCapture();
   glPopAttrib();
 
-  // Render all color buffer attachments into window
-  if (show_gui_) {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    glMatrixMode(GL_PROJECTION);
-    glPushMatrix();
-      glLoadIdentity();
-      gluOrtho2D(0.0, 1.0, 0.0, 1.0);
-
-      glMatrixMode(GL_MODELVIEW);	
-      glPushMatrix();
-        glLoadIdentity();
-
-        // draw color buffer 0
-        fbo_->bind(0);
-        glBegin(GL_QUADS);
-          glTexCoord2f(0.0, fbo_->getHeight());
-          glVertex2f(0.0, 0.5);
-          glTexCoord2f(fbo_->getWidth(), fbo_->getHeight());
-          glVertex2f(0.333, 0.5);
-          glTexCoord2f(fbo_->getWidth(), 0.0);
-          glVertex2f(0.333, 1.0);
-          glTexCoord2f(0.0, 0.0);
-          glVertex2f(0.0, 1.0);
-        glEnd();
-
-        // draw color buffer 1
-        fbo_->bind(1);
-        glBegin(GL_QUADS);
-          glTexCoord2f(0.0, fbo_->getHeight());
-          glVertex2f(0.0, 0.0);
-          glTexCoord2f(fbo_->getWidth(), fbo_->getHeight());
-          glVertex2f(0.333, 0.0);
-          glTexCoord2f(fbo_->getWidth(), 0.0);
-          glVertex2f(0.333, 0.5);
-          glTexCoord2f(0.0, 0.0);
-          glVertex2f(0.0, 0.5);
-        glEnd();
-
-        // draw color buffer 2
-        fbo_->bind(2);
-        glBegin(GL_QUADS);
-          glTexCoord2f(0.0, fbo_->getHeight());
-          glVertex2f(0.333, 0.5);
-          glTexCoord2f(fbo_->getWidth(), fbo_->getHeight());
-          glVertex2f(0.666, 0.5);
-          glTexCoord2f(fbo_->getWidth(), 0.0);
-          glVertex2f(0.666, 1.0);
-          glTexCoord2f(0.0, 0.0);
-          glVertex2f(0.333, 1.0);
-        glEnd();
-
-        // draw color buffer 3
-        fbo_->bind(3);
-        glBegin(GL_QUADS);
-          glTexCoord2f(0.0, fbo_->getHeight());
-          glVertex2f(0.333, 0.0);
-          glTexCoord2f(fbo_->getWidth(), fbo_->getHeight());
-          glVertex2f(0.666, 0.0);
-          glTexCoord2f(fbo_->getWidth(), 0.0);
-          glVertex2f(0.666, 0.5);
-          glTexCoord2f(0.0, 0.0);
-          glVertex2f(0.333, 0.5);
-        glEnd();
-
-        // draw depth buffer 
-        fbo_->bindDepth();
-        glBegin(GL_QUADS);
-          glTexCoord2f(0.0, fbo_->getHeight());
-          glVertex2f(0.666, 0.5);
-          glTexCoord2f(fbo_->getWidth(), fbo_->getHeight());
-          glVertex2f(1.0, 0.5);
-          glTexCoord2f(fbo_->getWidth(), 0.0);
-          glVertex2f(1.0, 1.0);
-          glTexCoord2f(0.0, 0.0);
-          glVertex2f(0.666, 1.0);
-        glEnd();
-
-      glPopMatrix();
-      glMatrixMode(GL_PROJECTION);
-    glPopMatrix();
-  } 
-
   fbo_->bind(1);
   glGetTexImage (fbo_->getTextureTarget(), 0, GL_RED, GL_FLOAT, masked_depth_);
   if (need_mask_)
@@ -731,13 +664,5 @@ void RealtimeURDFFilter::render (const double* camera_projection_matrix, ros::Ti
     fbo_->bind(3);
     glGetTexImage (fbo_->getTextureTarget(), 0, GL_RED, GL_UNSIGNED_BYTE, mask_);
   }
-
-  // Ok, finished with all OpenGL, let's swap!
-  if (show_gui_) {
-    glutSwapBuffers ();
-    glutPostRedisplay();
-    glutMainLoopEvent ();
-  }
-  // TODO: this necessary? glFlush ();
 }
 
