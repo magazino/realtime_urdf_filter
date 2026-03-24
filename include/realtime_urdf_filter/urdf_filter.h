@@ -46,7 +46,7 @@
 #include <realtime_urdf_filter/glad/glad.h>
 #define EGL_NO_X11
 #include <EGL/egl.h>
-#include <GL/glu.h>
+//#include <GL/glu.h>
 
 namespace realtime_urdf_filter
 {

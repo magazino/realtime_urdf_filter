@@ -30,9 +30,9 @@
 
 
 #include <realtime_urdf_filter/glad/glad.h>
-#include <GL/glu.h>
-#include <GL/glx.h>
-#undef Success  // <---- Screw Xlib for this
+//#include <GL/glu.h>
+//#include <GL/glx.h>
+//#undef Success  // <---- Screw Xlib for this
 
 #include <ros/node_handle.h>
 
